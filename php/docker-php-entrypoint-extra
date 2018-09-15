@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 XDEBUG_CURRENTLY_ENABLED=0
 if ! php -r 'exit(extension_loaded("xdebug") ? 1 : 0);'; then
     XDEBUG_CURRENTLY_ENABLED=1

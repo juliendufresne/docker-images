@@ -1,35 +1,59 @@
 sudo: required
 
-language: php
+language: bash
+
+git:
+    depth: 3
+    quiet: true
+
 services:
-    - docker
+  - docker
 
 env:
     global:
-        - DOCKER_ORGANIZATION=juliendufresne
-    #        - DOCKER_COMPOSE_VERSION=1.22.0
+      - DOCKER_ORGANIZATION=juliendufresne
     matrix:
-        - DOCKER_IMAGE=php DOCKER_IMAGE_TAG=7.1
-        - DOCKER_IMAGE=php DOCKER_IMAGE_TAG=7.2
-#        - DOCKER_IMAGE=php-parallel-lint DOCKER_IMAGE_TAG=1.0
+       - DOCKER_IMAGE=php DOCKER_IMAGE_TAG=7.1
+       - DOCKER_IMAGE=php DOCKER_IMAGE_TAG=7.2
+#       - DOCKER_IMAGE=php-parallel-lint DOCKER_IMAGE_TAG=1.0
 
-before_install:
-    - docker rmi $(docker images -q $DOCKER_ORGANIZATION/$DOCKER_IMAGE) || true
-    - docker pull $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG || true
+#before_install:
 #  - sudo rm /usr/local/bin/docker-compose
 #  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
 #  - chmod +x docker-compose
 #  - sudo mv docker-compose /usr/local/bin
 
+install:
+  - |
+      if [ $(shell docker images -q $DOCKER_ORGANIZATION/$DOCKER_IMAGE) -gt 0 ]; then
+          printf $(_FMT) "docker rmi $(shell docker images -q $DOCKER_ORGANIZATION/$DOCKER_IMAGE)"
+          docker rmi $(shell docker images -q $DOCKER_ORGANIZATION/$DOCKER_IMAGE)
+      fi
+  - docker pull $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+  - docker build --build-arg VERSION=$DOCKER_IMAGE_TAG --tag $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG --cache-from $DOCKER_ORGANIZATION/$DOCKER_IMAGE $DOCKER_IMAGE
+
 script:
-    - docker build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg VERSION=$DOCKER_IMAGE_TAG --tag $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG --cache-from $DOCKER_ORGANIZATION/$DOCKER_IMAGE $DOCKER_IMAGE
+  - docker images
+  - docker run --rm --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG --version
+  - |
+        docker run --rm --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG touch test-as-user
+        [ $(stat -c '%u' test-as-user) == "$(id -u)" ]
+  - |
+        docker run --rm --volume $PWD:/app $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG touch test-as-root
+        [ $(stat -c '%u' test-as-root) == "0" ]
+  - |
+        if docker run --rm -e XDEBUG_ENABLED=0 --volume $PWD:/app $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG php -m | grep -q "xdebug"
+        then
+            >&2 echo "Unable to deactivate XDEBUG"
+            exit 1
+        fi
 
 after_success:
-    - |
-        if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-            docker login -u "$DOCKER_HUB_LOGIN" -p "$DOCKER_HUB_PASSWORD"
-            docker push $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG
-        fi
+  - |
+      if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+          echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_LOGIN" --password-stdin
+          docker push $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+      fi
 
 notifications:
     email:
