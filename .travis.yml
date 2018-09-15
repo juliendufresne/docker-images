@@ -17,9 +17,11 @@ env:
        - DOCKER_IMAGE=php               DOCKER_IMAGE_TAG=7.2
        - DOCKER_IMAGE=php-cs-fixer      DOCKER_IMAGE_TAG=2.13
        - DOCKER_IMAGE=php-parallel-lint DOCKER_IMAGE_TAG=1.0
+       - DOCKER_IMAGE=phpmetrics        DOCKER_IMAGE_TAG=2.3
 
 install:
-  - docker pull $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG || true
+  - sudo docker pull $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG || true
+  - sudo docker pull composer:latest || true
 
 script:
   - ./test.sh $DOCKER_ORGANIZATION $DOCKER_IMAGE $DOCKER_IMAGE_TAG
@@ -28,7 +30,7 @@ after_success:
   - |
       if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
           echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_LOGIN" --password-stdin
-          docker push $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+          docker push $DOCKER_ORGANIZATION/$DOCKER_IMAGE
       fi
 
 notifications:
