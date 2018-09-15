@@ -1,5 +1,7 @@
 FROM php:7.1
 
+LABEL maintainer="Julien Dufresne"
+
 RUN set -ex; \
         \
         buildDeps='\
