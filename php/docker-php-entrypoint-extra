@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+
+XDEBUG_CURRENTLY_ENABLED=0
+if ! php -r 'exit(extension_loaded("xdebug") ? 1 : 0);'; then
+    XDEBUG_CURRENTLY_ENABLED=1
+fi
+
+case "$XDEBUG_ENABLED" in
+    '')
+        XDEBUG_ENABLED=${XDEBUG_CURRENTLY_ENABLED}
+        ;;
+    0|1)
+        ;;
+    *)
+        >&2 printf 'value for XDEBUG_ENABLED is not allowed. Set it to 0 to'
+        >&2 printf ' disable or 1 to enable xdebug.\n'
+        >&2 printf 'Current value: %s\n' "$XDEBUG_ENABLED"
+        exit 1
+        ;;
+esac
+
+if [ $XDEBUG_CURRENTLY_ENABLED != "$XDEBUG_ENABLED" ]; then
+    if [ "$XDEBUG_ENABLED" -eq 1 ]; then
+        docker-php-ext-enable xdebug
+    else
+        # this requires root privilege
+        rm -f "$PHP_INI_DIR/conf.d/docker-php-ext-xdebug.ini"
+    fi
+fi
+
+# include basic entrypoint
+. /usr/local/bin/docker-php-entrypoint "$@"
