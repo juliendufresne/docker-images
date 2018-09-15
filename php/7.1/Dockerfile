@@ -1,6 +1,4 @@
-ARG VERSION
-
-FROM php:$VERSION
+FROM php:7.1
 
 RUN set -ex; \
         \
