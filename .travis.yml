@@ -18,6 +18,7 @@ env:
        - DOCKER_IMAGE=php-cs-fixer      DOCKER_IMAGE_TAG=2.13
        - DOCKER_IMAGE=php-parallel-lint DOCKER_IMAGE_TAG=1.0
        - DOCKER_IMAGE=phpmetrics        DOCKER_IMAGE_TAG=2.3
+       - DOCKER_IMAGE=phpstan           DOCKER_IMAGE_TAG=0.10
 
 install:
   - sudo docker pull $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG || true
