@@ -15,14 +15,10 @@ env:
     matrix:
        - DOCKER_IMAGE=php               DOCKER_IMAGE_TAG=7.1
        - DOCKER_IMAGE=php               DOCKER_IMAGE_TAG=7.2
+       - DOCKER_IMAGE=php-cs-fixer      DOCKER_IMAGE_TAG=2.13
        - DOCKER_IMAGE=php-parallel-lint DOCKER_IMAGE_TAG=1.0
 
 install:
-  - |
-      if [ $(shell docker images -q $DOCKER_ORGANIZATION/$DOCKER_IMAGE) -gt 0 ]; then
-          printf $(_FMT) "docker rmi $(shell docker images -q $DOCKER_ORGANIZATION/$DOCKER_IMAGE)"
-          docker rmi $(shell docker images -q $DOCKER_ORGANIZATION/$DOCKER_IMAGE)
-      fi
   - docker pull $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG || true
 
 script:

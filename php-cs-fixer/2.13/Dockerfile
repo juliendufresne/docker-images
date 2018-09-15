@@ -41,8 +41,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 VOLUME ["/app"]
 WORKDIR /app
 
-ENTRYPOINT ["parallel-lint"]
+ENTRYPOINT ["php-cs-fixer"]
 
 RUN composer global require \
-        jakub-onderka/php-console-highlighter \
-        jakub-onderka/php-parallel-lint:1.0.*
+        friendsofphp/php-cs-fixer:2.13.*
