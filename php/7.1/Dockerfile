@@ -5,8 +5,6 @@ LABEL maintainer="Julien Dufresne"
 RUN set -ex; \
         \
         buildDeps='\
-    		ca-certificates \
-	    	\
             libxml2-dev \
             zlib1g-dev \
         '; \
