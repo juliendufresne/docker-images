@@ -20,6 +20,9 @@ RUN set -ex; \
         apt-get purge -y --auto-remove $buildDeps
 
 ENV COMPOSER_CACHE_DIR /composer-cache
+ENV COMPOSER_HOME /composer
+ENV COMPOSER_ALLOW_SUPERUSER 1
+ENV PATH /composer/vendor/bin:$PATH
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 RUN set -ex; \

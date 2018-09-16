@@ -32,10 +32,10 @@ RUN set -ex; \
     echo "memory_limit=-1" > /etc/php7/conf.d/99_memory-limit.ini; \
     rm -rf /var/cache/apk/* /var/tmp/* /tmp/*
 
+ENV COMPOSER_CACHE_DIR /composer-cache
 ENV COMPOSER_HOME /composer
 ENV COMPOSER_ALLOW_SUPERUSER 1
 ENV PATH /composer/vendor/bin:$PATH
-
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 VOLUME ["/app"]
