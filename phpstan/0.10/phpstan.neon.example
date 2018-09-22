@@ -1,0 +1,46 @@
+# This is just an example containing ALL the phpstan extension included in the
+# docker image. Please report to the corresponding extension documentation for
+# full configuration explanation.
+# The only thing that differs from documentation is the path. Since you are in a
+# docker container, extensions are not included in your project composer file
+# but within the docker container. So when you see "vendor/" in documentation,
+# you should use "/composer/vendor".
+
+# paths correspond to ones in the phpstan container
+includes:
+    # https://github.com/Jan0707/phpstan-prophecy
+    - /composer/vendor/jangregor/phpstan-prophecy/src/extension.neon
+    # https://github.com/phpstan/phpstan-beberlei-assert
+    - /composer/vendor/phpstan/phpstan-beberlei-assert/extension.neon
+    # https://github.com/phpstan/phpstan-deprecation-rules
+    - /composer/vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    # https://github.com/phpstan/phpstan-dibi
+    - /composer/vendor/phpstan/phpstan-dibi/extension.neon
+    # https://github.com/phpstan/phpstan-doctrine
+    - /composer/vendor/phpstan/phpstan-doctrine/extension.neon
+    # https://github.com/phpstan/phpstan-mockery
+    - /composer/vendor/phpstan/phpstan-mockery/extension.neon
+    # https://github.com/phpstan/phpstan-nette
+    - /composer/vendor/phpstan/phpstan-nette/extension.neon
+    - /composer/vendor/phpstan/phpstan-nette/rules.neon
+    # https://github.com/phpstan/phpstan-php-parser
+    - /composer/vendor/phpstan/phpstan-php-parser/extension.neon
+    # https://github.com/phpstan/phpstan-phpunit
+    - /composer/vendor/phpstan/phpstan-phpunit/extension.neon
+    - /composer/vendor/phpstan/phpstan-phpunit/rules.neon
+    # https://github.com/phpstan/phpstan-strict-rules
+    - /composer/vendor/phpstan/phpstan-strict-rules/rules.neon
+    # https://github.com/phpstan/phpstan-symfony
+    - /composer/vendor/phpstan/phpstan-symfony/extension.neon
+    # https://github.com/phpstan/phpstan-webmozart-assert
+    - /composer/vendor/phpstan/phpstan-webmozart-assert/extension.neon
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    symfony:
+        # Symfony < 4.0
+#        container_xml_path: %rootDir%/../../../var/cache/dev/appDevDebugProjectContainer.xml
+        # Symfony ⩾ 4.0
+        container_xml_path: %rootDir%/../../../var/cache/dev/srcDevDebugProjectContainer.xml
