@@ -7,40 +7,61 @@ git:
     quiet: true
 
 services:
-  - docker
+    - docker
 
 env:
     global:
-      - DOCKER_ORGANIZATION=juliendufresne LATEST=false
+      - DOCKER_ORGZ=juliendufresne LATEST=false PHP_VERS=""
     matrix:
-       - IMAGE=php               TAG=7.1
-       - IMAGE=php               TAG=7.2  LATEST=true
-       - IMAGE=php-cs-fixer      TAG=2.13 PHP_VERSION=7.1
-       - IMAGE=php-cs-fixer      TAG=2.13 PHP_VERSION=7.2 LATEST=true
-       - IMAGE=php-parallel-lint TAG=1.0  PHP_VERSION=7.1
-       - IMAGE=php-parallel-lint TAG=1.0  PHP_VERSION=7.2 LATEST=true
-       - IMAGE=phpmetrics        TAG=2.3  PHP_VERSION=7.1
-       - IMAGE=phpmetrics        TAG=2.3  PHP_VERSION=7.2 LATEST=true
-       - IMAGE=phpstan           TAG=0.10 PHP_VERSION=7.1
-       - IMAGE=phpstan           TAG=0.10 PHP_VERSION=7.2 LATEST=true
-       - IMAGE=speccy            TAG=0.7  LATEST=true
-       - IMAGE=textlint          TAG=11.0 LATEST=true
+       - LIB=php               LIB_VERS=7.1
+       - LIB=php               LIB_VERS=7.2               LATEST=true
+       - LIB=php-cs-fixer      LIB_VERS=2.13 PHP_VERS=7.1
+       - LIB=php-cs-fixer      LIB_VERS=2.13 PHP_VERS=7.2 LATEST=true
+       - LIB=php-parallel-lint LIB_VERS=1.0  PHP_VERS=7.1
+       - LIB=php-parallel-lint LIB_VERS=1.0  PHP_VERS=7.2 LATEST=true
+       - LIB=phpmetrics        LIB_VERS=2.3  PHP_VERS=7.1
+       - LIB=phpmetrics        LIB_VERS=2.3  PHP_VERS=7.2 LATEST=true
+       - LIB=phpstan           LIB_VERS=0.10 PHP_VERS=7.1
+       - LIB=phpstan           LIB_VERS=0.10 PHP_VERS=7.2 LATEST=true
+       - LIB=speccy            LIB_VERS=0.7               LATEST=true
+       - LIB=textlint          LIB_VERS=11.0              LATEST=true
+
+before_install:
+    - export DOCKER_IMAGE="$DOCKER_ORGZ/$LIB:$(./build.sh --travis --show-tag --php-version="$PHP_VERS" "$DOCKER_ORGZ" "$LIB" "$LIB_VERS")"
+    - docker pull $DOCKER_IMAGE || true
 
 install:
-  - sudo docker pull $DOCKER_ORGANIZATION/$IMAGE:$TAG || true
+    - ./build.sh --travis --php-version="$PHP_VERS" "$DOCKER_ORGZ" "$LIB" "$LIB_VERS"
 
 script:
-  - ./test.sh $DOCKER_ORGANIZATION $IMAGE $TAG
+    - docker images
+    # Lib version
+    - (set -x; docker run --rm --volume $PWD:/app $DOCKER_IMAGE --version)
+    - |
+        [[ "$LIB" != php* ]] || (set -x; docker run --rm -e XDEBUG_ENABLED=1 --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_IMAGE php -m) | grep -q "xdebug"
+    - |
+        [[ "$LIB" != php* ]] || (set -x; docker run --rm -e XDEBUG_ENABLED=1 --volume $PWD:/app $DOCKER_IMAGE php -m | grep -q "xdebug")
+    - |
+        if [[ "$LIB" == php* ]]; then
+            docker run --rm --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_IMAGE touch test-as-user
+            docker run --rm --volume $PWD:/app $DOCKER_IMAGE touch test-as-root
+            ls -al test-as-*
+            [[ $(stat -c '%u' test-as-user) -eq "$(id -u)" ]]
+            [[ $(stat -c '%u' test-as-root) -eq "0" ]]
+        fi
 
 after_success:
-  - |
-      if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-          echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_LOGIN" --password-stdin
-          if $LATEST; then
-              docker tag $DOCKER_ORGANIZATION/$IMAGE:$TAG $DOCKER_ORGANIZATION/$IMAGE:latest
-          fi
-          docker push $DOCKER_ORGANIZATION/$IMAGE
+    - if $LATEST; then
+        (set -x; docker tag $DOCKER_IMAGE $DOCKER_ORGZ/$LIB:latest)
       fi
+    - |
+        if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+            echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_LOGIN" --password-stdin
+            docker push $DOCKER_ORGZ/$LIB
+        else
+            echo "not in branch master - tag will not be pushed"
+            echo "docker push $DOCKER_ORGZ/$LIB"
+        fi
 
 notifications:
     email:

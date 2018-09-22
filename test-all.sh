@@ -7,7 +7,7 @@ set -euo pipefail
 # Avoid using space as a separator (default IFS=$' \t\n')
 IFS=$'\n\t'
 
-DOCKER_ORGANIZATION=juliendufresne
+declare docker_organizations=juliendufresne
 declare software_name=
 declare software_version=
 declare php_version_file=
@@ -27,11 +27,13 @@ for dockerfile in $(find * -mindepth 2 -maxdepth 2 -name "Dockerfile"); do
 
     if [[ -n "$php_version_file" ]]; then
         while IFS='' read -r line || [[ -n "$line" ]]; do
-            export PHP_VERSION="$line"
-            (set -x; ./test.sh $DOCKER_ORGANIZATION "${software_name}" "${software_version}")
-            unset PHP_VERSION
+            (set -x; ./build.sh --php-version="$line" "${docker_organizations}" "${software_name}" "${software_version}")
+            declare tag_name="$(./build.sh --show-tag --php-version="$line" "${docker_organizations}" "${software_name}" "${software_version}")"
+            (set -x; ./test.sh "$docker_organizations/${software_name}:${tag_name}")
         done < "$php_version_file"
     else
-        (set -x; ./test.sh $DOCKER_ORGANIZATION "${software_name}" "${software_version}")
+        (set -x; ./build.sh  "${docker_organizations}" "${software_name}" "${software_version}")
+        declare tag_name="$(./build.sh --show-tag "${docker_organizations}" "${software_name}" "${software_version}")"
+        (set -x; ./test.sh "$docker_organizations/${software_name}:${tag_name}")
     fi
 done
