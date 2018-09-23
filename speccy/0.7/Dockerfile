@@ -1,3 +1,4 @@
+# shellcheck disable=SC2148
 FROM node:alpine
 
 LABEL maintainer="Julien Dufresne"

@@ -29,7 +29,7 @@ fi
 
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
-	set -- $DEFAULT_DOCKER_COMMAND "$@"
+	set -- "$DEFAULT_DOCKER_COMMAND" "$@"
 fi
 
 exec "$@"
