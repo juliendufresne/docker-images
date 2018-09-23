@@ -10,6 +10,8 @@ RUN set -ex; \
         # shellcheck disable=SC2046
         apk add \
                 curl \
+                git \
+                openssh \
                 php7 \
                 $(apk search -v 'php7-*' | sed -E 's/^(php7-[a-z][^-]*)-.*$/\1/g' | grep -vE 'php7-[0-9]+\.[0-9]+\.[0-9]+' | sort); \
     echo "memory_limit=-1" > /etc/php7/conf.d/99_memory-limit.ini; \
