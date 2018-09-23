@@ -10,23 +10,21 @@ IFS=$'\n\t'
 
 function error
 {
-    >&2 printf "\033[38;5;208m%s\033[39m\n" "$1"
+    >&2 printf '\033[38;5;208m%s\033[39m\n' "$1"
 }
 
 function output
 {
-    printf "\033[38;5;106m%s\033[39m\n" "$1"
+    printf '\033[38;5;106m%s\033[39m\n' "$1"
 }
 
 function main
 {
-    declare -r current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    declare current_script_dir
+    current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    readonly current_script_dir
 
     declare docker_image=
-
-    declare show_tag=false
-    declare php_version=
-    declare travis=false
 
     while [[ "$#" -gt 0 ]]; do
         declare key="$1"
@@ -84,7 +82,7 @@ function check_activate_xdebug
 
     output "Check activate xdebug"
 
-    if ! (set -x; docker run ${options[@]} -e XDEBUG_ENABLED=1 "$docker_image" php -m) | grep -q xdebug; then
+    if ! (set -x; docker run "${options[@]}" -e XDEBUG_ENABLED=1 "$docker_image" php -m) | grep -q xdebug; then
         error "unable to activate xdebug"
         return 1
     fi
@@ -110,9 +108,12 @@ function check_file_permission
 
     output "Check file permission with user $user_name"
 
-    (set -x; docker run ${options[@]} "$docker_image" touch "$filename")
+    (set -x; docker run "${options[@]}" "$docker_image" touch "$filename")
 
-    declare file_owner="$(stat -c '%u' "$filename")"
+    declare file_owner
+    file_owner="$(stat -c '%u' "$filename")"
+    readonly file_owner
+
     rm --interactive=never "$filename"
 
     if [[ "$file_owner" != "$user_id" ]]; then
@@ -144,8 +145,8 @@ function check_software_version
 {
     declare -r docker_image="$1"
     output "Check software version"
-    (set -x; docker run --rm --volume $PWD:/app "$docker_image" --version)
+    (set -x; docker run --rm --volume "$PWD":/app "$docker_image" --version)
 }
 readonly -f "check_software_version"
 
-main $@
+main "$@"

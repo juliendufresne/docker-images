@@ -8,16 +8,17 @@ set -euo pipefail
 IFS=$'\n\t'
 
 declare -g DOCKER_TAG
+declare -g current_script_dir
+current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly current_script_dir
 
 function error
 {
-    >&2 printf "\033[38;5;208m%s\033[39m\n" "$1"
+    >&2 printf '\033[38;5;208m%s\033[39m\n' "$1"
 }
 
 function main
 {
-    declare -r current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
     declare docker_organization=
     declare software_name=
     declare software_version=
@@ -82,7 +83,7 @@ function main
     extract_docker_tag "$software_version" "$php_version"
 
     if $show_tag; then
-        echo $DOCKER_TAG
+        echo "$DOCKER_TAG"
         return 0
     fi
 
@@ -111,7 +112,7 @@ function build_docker_image
 
     (
         set -x;
-        docker build ${build_options[@]} .
+        docker build "${build_options[@]}" .
     )
 }
 readonly -f "build_docker_image"
@@ -128,4 +129,4 @@ function extract_docker_tag
 }
 readonly -f "extract_docker_tag"
 
-main $@
+main "$@"

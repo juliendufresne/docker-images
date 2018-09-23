@@ -36,13 +36,17 @@ install:
     - ./build.sh --travis --php-version="$PHP_VERS" "$DOCKER_ORGZ" "$LIB" "$LIB_VERS"
 
 script:
+    # check shell file format
+    - find . \( -name "*.sh" -o -name "Dockerfile" \) | xargs shellcheck
     - docker images
     # Lib version
     - (set -x; docker run --rm --volume $PWD:/app $DOCKER_IMAGE --version)
+    # Activate xdebug
     - |
         [[ "$LIB" != php* ]] || (set -x; docker run --rm -e XDEBUG_ENABLED=1 --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_IMAGE php -m) | grep -q "xdebug"
     - |
         [[ "$LIB" != php* ]] || (set -x; docker run --rm -e XDEBUG_ENABLED=1 --volume $PWD:/app $DOCKER_IMAGE php -m | grep -q "xdebug")
+    # Creating file
     - |
         if [[ "$LIB" == php* ]]; then
             docker run --rm --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_IMAGE touch test-as-user
