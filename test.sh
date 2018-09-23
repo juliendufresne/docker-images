@@ -7,97 +7,145 @@ set -euo pipefail
 # Avoid using space as a separator (default IFS=$' \t\n')
 IFS=$'\n\t'
 
-DOCKER_ORGANIZATION=$1
-DOCKER_IMAGE=$2
-DOCKER_IMAGE_TAG=$3
-DOCKER_BUILD_ARGS=()
 
-FMT="\033[38;5;106m%s\033[39m\n"
-ERR="\033[38;5;208m%s\033[39m\n"
+function error
+{
+    >&2 printf "\033[38;5;208m%s\033[39m\n" "$1"
+}
 
-if ! [[ -d "$DOCKER_IMAGE/$DOCKER_IMAGE_TAG" ]]; then
-    >&2 printf ${ERR} "Dir not found: $DOCKER_IMAGE/$DOCKER_IMAGE_TAG"
-    exit 1
-fi
+function output
+{
+    printf "\033[38;5;106m%s\033[39m\n" "$1"
+}
 
-cd "$DOCKER_IMAGE/$DOCKER_IMAGE_TAG"
+function main
+{
+    declare -r current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if [[ -v PHP_VERSION ]]; then
-    DOCKER_IMAGE_TAG="$DOCKER_IMAGE_TAG"-php"$PHP_VERSION"
-    DOCKER_BUILD_ARGS+=("--build-arg" "PHP_VERSION=$PHP_VERSION")
-fi
+    declare docker_image=
 
-DOCKER_BUILD_ARGS+=("--tag" "$DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG")
-if ! [[ -v TRAVIS ]]; then
-    (
-        set -x;
-        docker build ${DOCKER_BUILD_ARGS[@]} .
-    )
-else
-    (
-        set -x;
-        docker build \
-                 ${DOCKER_BUILD_ARGS[@]} \
-                 --cache-from "$DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG" \
-                 --cache-from composer:latest \
-                 .
-    )
-fi
+    declare show_tag=false
+    declare php_version=
+    declare travis=false
 
-printf ${FMT} "docker images"
-docker images
+    while [[ "$#" -gt 0 ]]; do
+        declare key="$1"
+        case "$key" in
+            -*)
+                error "Unknown option $1"
 
-if [[ $(docker images -q "$DOCKER_ORGANIZATION/$DOCKER_IMAGE" | wc -l) -eq 0 ]]; then
-    >&2 printf ${ERR} "Unable to find image"
-    exit 1
-fi
+                return 1
+                ;;
+            *)
+                if [[ -z "$docker_image" ]]; then
+                    docker_image="$1"
+                else
+                    error "Unknown argument $1"
 
-printf ${FMT} "$DOCKER_IMAGE version"
-docker run --rm --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG --version
+                    return 1
+                fi
+                ;;
+        esac
+        shift
+    done
 
-if [[ "$DOCKER_IMAGE" == "php" ]]; then
+    list_docker_images
+    check_image_exist "$docker_image"
+    check_software_version "$docker_image"
 
-    printf ${FMT} "Write file as current user"
-    docker run --rm --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG php -r 'shell_exec("echo a > test-as-user");'
-    if [[ $(stat -c '%u' test-as-user) != "$(id -u)" ]]; then
-        [[ -v TRAVIS ]] || rm test-as-user
-        >&2 printf ${ERR} "File test-as-user does not belong to current user"
-        >&2 printf ${ERR} "Current user: $(id -u)"
-        >&2 printf ${ERR} "File owner: $(stat -c '%u' test-as-user)"
-
-        exit 1
+    if [[ "$docker_image" == *php* ]]; then
+        check_file_permission "$docker_image" "user" "$(id -u)"
+        check_file_permission "$docker_image" "root" "0"
+        check_activate_xdebug "$docker_image" "$(id -u)"
+        check_activate_xdebug "$docker_image" "0"
     fi
-    [[ -v TRAVIS ]] || rm test-as-user
-    printf ${FMT} "OK"
 
-    printf ${FMT} "Write file as root user"
-    docker run --rm --volume $PWD:/app $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG php -r 'shell_exec("echo a > test-as-root");'
-    if [[ $(stat -c '%u' test-as-root) != "0" ]]; then
-        [[ -v TRAVIS ]] || sudo rm test-as-root
-        >&2 printf ${ERR} "File test-as-root does not belong to root user"
-        >&2 printf ${ERR} "Root user id: 0"
-        >&2 printf ${ERR} "File owner id: $(stat -c '%u' test-as-root)"
+    return 0
+}
+readonly -f "main"
 
-        exit 1
+function list_docker_images
+{
+    output "List known docker images"
+    docker images
+}
+readonly -f "list_docker_images"
+
+function check_activate_xdebug
+{
+    declare -r docker_image="$1"
+    declare -r user_id="$2"
+
+    declare -a options=("--rm" "--volume" "$PWD:/app")
+
+    if [[ "$user_id" -ne 0 ]]; then
+        options+=("--user" "$user_id")
     fi
-    [[ -v TRAVIS ]] || sudo rm test-as-root
-    printf ${FMT} "OK"
 
-    printf ${FMT} "test enabling XDEBUG as current user"
-    if ! docker run --rm -e XDEBUG_ENABLED=1 --volume $PWD:/app --user=$(id -u):$(id -g) $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG php -m | grep -q "xdebug"
-    then
-        >&2 printf ${ERR} "Unable to activate XDEBUG"
-        exit 1
+    output "Check activate xdebug"
+
+    if ! (set -x; docker run ${options[@]} -e XDEBUG_ENABLED=1 "$docker_image" php -m) | grep -q xdebug; then
+        error "unable to activate xdebug"
+        return 1
     fi
-    printf ${FMT} "OK"
 
-    printf ${FMT} "test enabling XDEBUG"
-    if ! docker run --rm -e XDEBUG_ENABLED=1 --volume $PWD:/app $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG php -m | grep -q "xdebug"
-    then
-        >&2 printf ${ERR} "Unable to activate XDEBUG"
-        exit 1
+    output "OK"
+
+    return 0
+}
+readonly -f "check_activate_xdebug"
+
+function check_file_permission
+{
+    declare -r docker_image="$1"
+    declare -r user_name="$2"
+    declare -r user_id="$3"
+
+    declare filename="test-as-$user_name"
+    declare -a options=("--rm" "--volume" "$PWD:/app")
+
+    if [[ "$user_id" -ne 0 ]]; then
+        options+=("--user" "$user_id")
     fi
-    printf ${FMT} "OK"
-fi
 
-exit 0
+    output "Check file permission with user $user_name"
+
+    (set -x; docker run ${options[@]} "$docker_image" touch "$filename")
+
+    declare file_owner="$(stat -c '%u' "$filename")"
+    rm --interactive=never "$filename"
+
+    if [[ "$file_owner" != "$user_id" ]]; then
+        error "File $filename does not belong to current user"
+        error "Expected user id: $user_id"
+        error "File owner: $(stat -c '%u' "$filename")"
+
+        return 1
+    fi
+
+    return 0
+}
+readonly -f "check_file_permission"
+
+function check_image_exist
+{
+    declare -r docker_image="$1"
+
+    output "Check image exist"
+    if [[ $(docker images -q "$docker_image" | wc -l) -eq 0 ]]; then
+        error "Image $docker_image does not exists"
+    else
+        output "OK"
+    fi
+}
+readonly -f "check_image_exist"
+
+function check_software_version
+{
+    declare -r docker_image="$1"
+    output "Check software version"
+    (set -x; docker run --rm --volume $PWD:/app "$docker_image" --version)
+}
+readonly -f "check_software_version"
+
+main $@

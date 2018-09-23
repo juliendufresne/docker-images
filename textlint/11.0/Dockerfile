@@ -11,7 +11,6 @@ RUN npm install --global \
                     @textlint-rule/textlint-rule-no-invalid-control-character \
                     textlint-rule-en-capitalization
 
-USER app
 VOLUME ["/app"]
 WORKDIR /app
 
