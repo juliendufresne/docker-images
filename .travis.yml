@@ -11,29 +11,35 @@ services:
 
 env:
     global:
-      - DOCKER_ORGANIZATION=juliendufresne
+      - DOCKER_ORGANIZATION=juliendufresne LATEST=false
     matrix:
-       - DOCKER_IMAGE=php               DOCKER_IMAGE_TAG=7.1
-       - DOCKER_IMAGE=php               DOCKER_IMAGE_TAG=7.2
-       - DOCKER_IMAGE=php-cs-fixer      DOCKER_IMAGE_TAG=2.13
-       - DOCKER_IMAGE=php-parallel-lint DOCKER_IMAGE_TAG=1.0
-       - DOCKER_IMAGE=phpmetrics        DOCKER_IMAGE_TAG=2.3
-       - DOCKER_IMAGE=phpstan           DOCKER_IMAGE_TAG=0.10
-       - DOCKER_IMAGE=speccy            DOCKER_IMAGE_TAG=0.7
-       - DOCKER_IMAGE=textlint          DOCKER_IMAGE_TAG=11.0
+       - IMAGE=php               TAG=7.1
+       - IMAGE=php               TAG=7.2  LATEST=true
+       - IMAGE=php-cs-fixer      TAG=2.13 PHP_VERSION=7.1
+       - IMAGE=php-cs-fixer      TAG=2.13 PHP_VERSION=7.2 LATEST=true
+       - IMAGE=php-parallel-lint TAG=1.0  PHP_VERSION=7.1
+       - IMAGE=php-parallel-lint TAG=1.0  PHP_VERSION=7.2 LATEST=true
+       - IMAGE=phpmetrics        TAG=2.3  PHP_VERSION=7.1
+       - IMAGE=phpmetrics        TAG=2.3  PHP_VERSION=7.2 LATEST=true
+       - IMAGE=phpstan           TAG=0.10 PHP_VERSION=7.1
+       - IMAGE=phpstan           TAG=0.10 PHP_VERSION=7.2 LATEST=true
+       - IMAGE=speccy            TAG=0.7  LATEST=true
+       - IMAGE=textlint          TAG=11.0 LATEST=true
 
 install:
-  - sudo docker pull $DOCKER_ORGANIZATION/$DOCKER_IMAGE:$DOCKER_IMAGE_TAG || true
-  - sudo docker pull composer:latest || true
+  - sudo docker pull $DOCKER_ORGANIZATION/$IMAGE:$TAG || true
 
 script:
-  - ./test.sh $DOCKER_ORGANIZATION $DOCKER_IMAGE $DOCKER_IMAGE_TAG
+  - ./test.sh $DOCKER_ORGANIZATION $IMAGE $TAG
 
 after_success:
   - |
       if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
           echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_LOGIN" --password-stdin
-          docker push $DOCKER_ORGANIZATION/$DOCKER_IMAGE
+          if $LATEST; then
+              docker tag $DOCKER_ORGANIZATION/$IMAGE:$TAG $DOCKER_ORGANIZATION/$IMAGE:latest
+          fi
+          docker push $DOCKER_ORGANIZATION/$IMAGE
       fi
 
 notifications:

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 XDEBUG_CURRENTLY_ENABLED=0
 if ! php -r 'exit(extension_loaded("xdebug") ? 1 : 0);'; then
@@ -21,12 +21,15 @@ esac
 
 if [ $XDEBUG_CURRENTLY_ENABLED != "$XDEBUG_ENABLED" ]; then
     if [ "$XDEBUG_ENABLED" -eq 1 ]; then
-        docker-php-ext-enable xdebug
+        sed -E -i 's/^;zend_extension/zend_extension/' /etc/php7/conf.d/xdebug.ini
     else
-        # this requires root privilege
-        rm -f "$PHP_INI_DIR/conf.d/docker-php-ext-xdebug.ini"
+        sed -E -i 's/^zend_extension/;zend_extension/' /etc/php7/conf.d/xdebug.ini
     fi
 fi
 
-# include basic entrypoint
-. /usr/local/bin/docker-php-entrypoint "$@"
+# first arg is `-f` or `--some-option`
+if [ "${1#-}" != "$1" ]; then
+	set -- $DEFAULT_DOCKER_COMMAND "$@"
+fi
+
+exec "$@"
