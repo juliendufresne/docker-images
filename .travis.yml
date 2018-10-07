@@ -25,6 +25,7 @@ env:
        - LIB=phpstan           LIB_VERS=0.10 PHP_VERS=7.2 LATEST=true
        - LIB=phpunit           LIB_VERS=7.3  PHP_VERS=7.1
        - LIB=phpunit           LIB_VERS=7.3  PHP_VERS=7.2 LATEST=true
+       - LIB=prettier          LIB_VERS=1.14              LATEST=true
        - LIB=speccy            LIB_VERS=0.7               LATEST=true
        - LIB=textlint          LIB_VERS=11.0              LATEST=true
 
